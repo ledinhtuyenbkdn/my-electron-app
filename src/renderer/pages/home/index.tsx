@@ -16,6 +16,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import ImageCard, { ImageCardProps } from '../../components/ImageCard';
 
 const Tesseract = require('tesseract.js');
@@ -32,19 +33,34 @@ export default function Home() {
   };
 
   const addImage = (file: any) => {
+    console.log(file);
+    const id = uuidv4();
     setImages([
       ...images,
       {
+        id,
         file,
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         temperature: '',
-        processing: true,
       },
     ]);
+    //
     // Tesseract.recognize(file, 'eng', {})
     //   .then(({ data: { text } }) => {
     //     console.log(text);
+    //
+    //     const updatedImages = images.map((image) => {
+    //       if (image.id === id) {
+    //         return {
+    //           ...image,
+    //           temperature: text,
+    //         };
+    //       }
+    //       return image;
+    //     });
+    //     console.log(updatedImages);
+    //     // setImages(updatedImages);
     //     return text;
     //   })
     //   .catch((err: any) => {
@@ -83,7 +99,12 @@ export default function Home() {
                 </Button>
               </Form.Item>
               <Form.Item>
-                <Upload showUploadList={false} beforeUpload={addImage}>
+                <Upload
+                  showUploadList={false}
+                  beforeUpload={addImage}
+                  accept="image/*"
+                  multiple
+                >
                   <Button icon={<UploadOutlined />}>Thêm ảnh</Button>
                 </Upload>
               </Form.Item>
@@ -133,7 +154,7 @@ export default function Home() {
             <ImageCard
               fileUrl={image.fileUrl}
               fileName={image.fileName}
-              processing={image.processing}
+              temperature={image.temperature}
             />
           </Col>
         ))}
