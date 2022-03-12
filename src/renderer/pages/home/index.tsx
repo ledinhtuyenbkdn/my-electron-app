@@ -8,24 +8,36 @@ import {
   Form,
   Input,
   Upload,
+  List,
+  Avatar,
+  Skeleton,
+  Badge
 } from 'antd';
 import {
   DownCircleOutlined,
   UpCircleOutlined,
   FileImageOutlined,
   UploadOutlined,
-  IssuesCloseOutlined
+  IssuesCloseOutlined,  
+  DeleteOutlined,
+  ScanOutlined
 } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
-import ImageCard from '../../components/ImageCard';
 import { useSelector, useDispatch } from 'react-redux';
 import { addImage, deleteImage, Status, updateTemperature } from './homeSlice';
 import { RootState } from '../../store';
+import { PresetStatusColorType } from 'antd/lib/_util/colors';
 
 const Tesseract = require('tesseract.js');
 
 export default function Home() {
   const images = useSelector((state: RootState) => state.home.images);
+  const total = images.length;
+  const lower = images.filter(o => o.status === Status.LOWER).length;
+  const higher = images.filter(o => o.status === Status.HIGHER).length;
+  const error = images.filter(o => o.status === Status.ERROR).length;
+  const processing = images.filter(o => o.status === Status.PROCESSING).length;
+
   const dispatch = useDispatch();
 
   const onFinish = (values: any) => {
@@ -58,6 +70,10 @@ export default function Home() {
       })
       .catch((err: any) => {
         console.log(err);
+        dispatch(updateTemperature({
+          id,
+          temperature: 'error',
+        }))
       });
     return false;
   };
@@ -107,64 +123,58 @@ export default function Home() {
           </Card>
         </Col>
       </Row>
-      <Row gutter={16}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Tổng số file"
-              value={images.length}
-              prefix={<FileImageOutlined />}
-              suffix="file"
-            />
-          </Card>
+      <Row gutter={16} style={{backgroundColor: 'white'}}>
+        <Col span={4}>
+          <Statistic title="Tổng số file" value={total} prefix={<FileImageOutlined />} />
         </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Nhiệt độ thấp"
-              value={11.28}
-              precision={2}
-              valueStyle={{ color: '#3f8600' }}
-              prefix={<DownCircleOutlined />}
-              suffix="file"
-            />
-          </Card>
+        <Col span={5}>
+          <Statistic title="Nhiệt độ thấp" value={lower} prefix={<DownCircleOutlined />} valueStyle={{ color: '#3f8600' }}/>
         </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Nhiệt độ cao"
-              value={9.3}
-              valueStyle={{ color: '#cf1322' }}
-              prefix={<UpCircleOutlined />}
-              suffix="file"
-            />
-          </Card>
+        <Col span={5}>
+          <Statistic title="Nhiệt độ cao" value={higher} prefix={<UpCircleOutlined />} valueStyle={{ color: '#fbc02d' }}/>
         </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Không xác định"
-              value={9.3}
-              valueStyle={{ color: '#fdd835' }}
-              prefix={<IssuesCloseOutlined />}
-              suffix="file"
-            />
-          </Card>
+        <Col span={5}>
+          <Statistic title="Đang xử lý" value={processing} prefix={<ScanOutlined />} valueStyle={{ color: '#1976d2' }}/>
+        </Col>
+        <Col span={5}>
+          <Statistic title="Lỗi" value={error} prefix={<IssuesCloseOutlined />} valueStyle={{ color: '#d32f2f' }}/>
         </Col>
       </Row>
       <Row gutter={16}>
-        {images.map((image) => (
-          <Col span={4}>
-            <ImageCard
-              id={image.id}
-              fileUrl={image.fileUrl}
-              fileName={image.fileName}
-              temperature={image.temperature}
-              onDelete={handleRemoveImage}
-            />
-          </Col>
-        ))}
+        <Col span={24}>
+          <Card>
+          <List
+        itemLayout="horizontal"
+        dataSource={images}
+        renderItem={item => {
+          let statusLabel = 'processing';
+          if (item.status == Status.LOWER) {
+            statusLabel = 'success';
+          }
+          if (item.status == Status.HIGHER) {
+            statusLabel = 'warning';
+          }
+          if (item.status == Status.ERROR) {
+            statusLabel = 'error';
+          }
+          return (
+            <List.Item
+              actions={[<DeleteOutlined key="delete" onClick={() => handleRemoveImage(item.id)}/>]}
+            >
+              <Skeleton avatar title={false} active loading={false}>
+                <List.Item.Meta
+                  avatar={<Avatar shape="square" size={64} src={item.fileUrl} />}
+                  title={item.fileName}
+                  description={item.temperature}
+                />
+                <div><Badge status={statusLabel as PresetStatusColorType} text={item.status} /></div>
+              </Skeleton>
+            </List.Item>
+          );
+        }}
+      />
+          </Card>
+        </Col>
       </Row>
     </Layout>
   );

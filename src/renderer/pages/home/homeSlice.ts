@@ -1,10 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 export enum Status {
-  PROCESSING,
-  LOWER,
-  HIGHER,
-  ERROR
+  PROCESSING = 'Đang xử lý',
+  LOWER = 'Thấp hơn',
+  HIGHER = 'Cao hơn',
+  ERROR = 'Lỗi'
 }
 export type ImageCard = {
   id: string;
@@ -17,12 +17,14 @@ export type ImageCard = {
 
 export type HomeState = {
   images: ImageCard[];
+  limit: number;
 };
 
 export const homeSlice = createSlice({
   name: 'home',
   initialState: {
     images: [],
+    limit: 20,
   } as HomeState,
   reducers: {
     addImage: (state, action) => {
@@ -34,11 +36,20 @@ export const homeSlice = createSlice({
     },
     updateTemperature: (state, action) => {
       const { id, temperature } = action.payload;
+      const tempNum = parseFloat(temperature);
+      let status = Status.ERROR;
+      if (tempNum <= state.limit) {
+        status = Status.LOWER;
+      }
+      if (tempNum > state.limit) {
+        status = Status.HIGHER;
+      }
       state.images = state.images.map(image => {
         if (image.id === id) {
           return {
             ...image,
             temperature,
+            status: status,
           }
         } else {
           return image;
