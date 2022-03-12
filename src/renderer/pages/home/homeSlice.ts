@@ -8,7 +8,6 @@ export enum Status {
 }
 export type ImageCard = {
   id: string;
-  file: File;
   fileUrl: string;
   fileName: string;
   temperature: string;

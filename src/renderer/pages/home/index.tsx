@@ -27,7 +27,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { addImage, deleteImage, Status, updateTemperature } from './homeSlice';
 import { RootState } from '../../store';
 import { PresetStatusColorType } from 'antd/lib/_util/colors';
+import { Buffer } from 'buffer';
 
+const CIP = require('canvas_image_processing');
 const Tesseract = require('tesseract.js');
 
 export default function Home() {
@@ -53,28 +55,58 @@ export default function Home() {
     const id = uuidv4();
     dispatch(addImage({
       id,
-      file,
       fileName: file.name,
       fileUrl: URL.createObjectURL(file),
       temperature: '',
       status: Status.PROCESSING,
     }));
     
-    Tesseract.recognize(file, 'eng', {})
-      .then(({ data: { text } }) => {
-        dispatch(updateTemperature({
-          id,
-          temperature: text,
-        }))
-        return text;
-      })
-      .catch((err: any) => {
-        console.log(err);
-        dispatch(updateTemperature({
-          id,
-          temperature: 'error',
-        }))
-      });
+    try {
+
+      const reader = new FileReader();
+    reader.onload = function(e) {
+      let base64_image = e?.target?.result;
+ 
+      CIP.cropImage64(base64_image, 0, 0, 300, 100).then((cropped_image: string) => {
+        // console.log(cropped_image)
+        fetch(cropped_image)
+.then(res => res.blob())
+.then(blob => {
+  const url = URL.createObjectURL(blob);
+  console.log(url);
+  
+
+  Tesseract.recognize(url, 'eng', {})
+  .then(({ data: { text } }) => {
+    dispatch(updateTemperature({
+      id,
+      temperature: text,
+    }))
+    return text;
+  })
+  .catch((err: any) => {
+    console.log(err);
+    dispatch(updateTemperature({
+      id,
+      temperature: 'error',
+    }))
+  });
+  });
+
+})
+       
+
+    };
+    reader.readAsDataURL(file);
+
+      
+    } catch (e) {
+      dispatch(updateTemperature({
+        id,
+        temperature: 'error',
+      }));
+    }
+    
     return false;
   };
 
