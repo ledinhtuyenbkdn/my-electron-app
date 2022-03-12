@@ -25,8 +25,15 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { useSelector, useDispatch } from 'react-redux';
 import { PresetStatusColorType } from 'antd/lib/_util/colors';
-import { addImage, deleteImage, Status, updateTemperature } from './homeSlice';
+import {
+  addImage,
+  deleteImage,
+  Status,
+  updateTemperature,
+  setLimit,
+} from './homeSlice';
 import { RootState } from '../../store';
+import textProcessing from './textProcessing';
 
 const { Image } = require('image-js');
 const Tesseract = require('tesseract.js');
@@ -45,6 +52,7 @@ export default function Home() {
 
   const onFinish = (values: any) => {
     console.log('Success:', values);
+    dispatch(setLimit(values.temperature));
   };
 
   const onFinishFailed = (errorInfo: any) => {
@@ -73,14 +81,13 @@ export default function Home() {
         .mask({ algorithm: 'threshold', threshold: 150 })
         .invert();
       const base64 = preprocessed.toDataURL();
-      console.log(base64);
       // ocr
       Tesseract.recognize(base64, 'eng', {})
         .then(({ data: { text } }) => {
           dispatch(
             updateTemperature({
               id,
-              temperature: text,
+              temperature: textProcessing(text),
             })
           );
           return text;
