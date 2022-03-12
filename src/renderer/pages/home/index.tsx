@@ -10,19 +10,23 @@ import {
   Upload,
 } from 'antd';
 import {
-  ArrowUpOutlined,
-  ArrowDownOutlined,
+  DownCircleOutlined,
+  UpCircleOutlined,
   FileImageOutlined,
   UploadOutlined,
+  IssuesCloseOutlined
 } from '@ant-design/icons';
-import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import ImageCard, { ImageCardProps } from '../../components/ImageCard';
+import ImageCard from '../../components/ImageCard';
+import { useSelector, useDispatch } from 'react-redux';
+import { addImage, deleteImage, Status, updateTemperature } from './homeSlice';
+import { RootState } from '../../store';
 
 const Tesseract = require('tesseract.js');
 
 export default function Home() {
-  const [images, setImages] = useState<ImageCardProps[]>([]);
+  const images = useSelector((state: RootState) => state.home.images);
+  const dispatch = useDispatch();
 
   const onFinish = (values: any) => {
     console.log('Success:', values);
@@ -32,44 +36,35 @@ export default function Home() {
     console.log('Failed:', errorInfo);
   };
 
-  const addImage = (file: any) => {
+  const handleOnUploadImage = (file: any) => {
     console.log(file);
     const id = uuidv4();
-    setImages([
-      ...images,
-      {
-        id,
-        file,
-        fileName: file.name,
-        fileUrl: URL.createObjectURL(file),
-        temperature: '',
-      },
-    ]);
-    //
-    // Tesseract.recognize(file, 'eng', {})
-    //   .then(({ data: { text } }) => {
-    //     console.log(text);
-    //
-    //     const updatedImages = images.map((image) => {
-    //       if (image.id === id) {
-    //         return {
-    //           ...image,
-    //           temperature: text,
-    //         };
-    //       }
-    //       return image;
-    //     });
-    //     console.log(updatedImages);
-    //     // setImages(updatedImages);
-    //     return text;
-    //   })
-    //   .catch((err: any) => {
-    //     console.log(err);
-    //   });
+    dispatch(addImage({
+      id,
+      file,
+      fileName: file.name,
+      fileUrl: URL.createObjectURL(file),
+      temperature: '',
+      status: Status.PROCESSING,
+    }));
+    
+    Tesseract.recognize(file, 'eng', {})
+      .then(({ data: { text } }) => {
+        dispatch(updateTemperature({
+          id,
+          temperature: text,
+        }))
+        return text;
+      })
+      .catch((err: any) => {
+        console.log(err);
+      });
     return false;
   };
 
-  const removeImage = () => {};
+  const handleRemoveImage = (id: string) => {
+      dispatch(deleteImage(id));
+  };
 
   return (
     <Layout>
@@ -101,7 +96,7 @@ export default function Home() {
               <Form.Item>
                 <Upload
                   showUploadList={false}
-                  beforeUpload={addImage}
+                  beforeUpload={handleOnUploadImage}
                   accept="image/*"
                   multiple
                 >
@@ -113,48 +108,60 @@ export default function Home() {
         </Col>
       </Row>
       <Row gutter={16}>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
               title="Tổng số file"
-              value={12}
+              value={images.length}
               prefix={<FileImageOutlined />}
               suffix="file"
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
-              title="Active"
+              title="Nhiệt độ thấp"
               value={11.28}
               precision={2}
               valueStyle={{ color: '#3f8600' }}
-              prefix={<ArrowDownOutlined />}
-              suffix="%"
+              prefix={<DownCircleOutlined />}
+              suffix="file"
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card>
             <Statistic
-              title="Idle"
+              title="Nhiệt độ cao"
               value={9.3}
-              precision={2}
               valueStyle={{ color: '#cf1322' }}
-              prefix={<ArrowUpOutlined />}
-              suffix="%"
+              prefix={<UpCircleOutlined />}
+              suffix="file"
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Không xác định"
+              value={9.3}
+              valueStyle={{ color: '#fdd835' }}
+              prefix={<IssuesCloseOutlined />}
+              suffix="file"
             />
           </Card>
         </Col>
       </Row>
       <Row gutter={16}>
         {images.map((image) => (
-          <Col span={6}>
+          <Col span={4}>
             <ImageCard
+              id={image.id}
               fileUrl={image.fileUrl}
               fileName={image.fileName}
               temperature={image.temperature}
+              onDelete={handleRemoveImage}
             />
           </Col>
         ))}
