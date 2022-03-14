@@ -18,6 +18,7 @@ export type ImageCard = {
 export type HomeState = {
   images: ImageCard[];
   limit: number;
+  processing: boolean;
 };
 
 export const homeSlice = createSlice({
@@ -25,10 +26,17 @@ export const homeSlice = createSlice({
   initialState: {
     images: [],
     limit: 20,
+    processing: false,
   } as HomeState,
   reducers: {
     addImage: (state, action) => {
       state.images = [action.payload, ...state.images];
+    },
+    startProcessing: (state) => {
+      state.processing = true;
+    },
+    finishProcessing: (state) => {
+      state.processing = false;
     },
     addImages: (state, action) => {
       state.images = [...action.payload, ...state.images];
@@ -81,7 +89,7 @@ export const homeSlice = createSlice({
 });
 
 // Action creators are generated for each case reducer function
-export const { addImage, deleteImage, updateTemperature, setLimit, addImages } =
+export const { addImage, deleteImage, updateTemperature, setLimit, addImages, startProcessing, finishProcessing } =
   homeSlice.actions;
 
 export default homeSlice.reducer;

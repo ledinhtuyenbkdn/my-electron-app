@@ -11,9 +11,6 @@ const processText = (input: string) => {
   }
   const newInput = input.substring(startIndex);
   let number = parseFloat(newInput);
-  if (number > 100) {
-    number /= 10;
-  }
   return number;
 };
 export default processText;

@@ -33,8 +33,8 @@ import {
   deleteImage,
   Status,
   updateTemperature,
-  setLimit,
-} from './homeSlice';
+  setLimit, startProcessing, finishProcessing
+} from "./homeSlice";
 import { RootState } from '../../store';
 import textProcessing from './textProcessing';
 
@@ -43,6 +43,7 @@ const Tesseract = require('tesseract.js');
 
 export default function Home() {
   const images = useSelector((state: RootState) => state.home.images);
+  const loading = useSelector((state: RootState) => state.home.processing);
   const total = images.length;
   const lower = images.filter((o) => o.status === Status.LOWER).length;
   const higher = images.filter((o) => o.status === Status.HIGHER).length;
@@ -100,6 +101,8 @@ export default function Home() {
   };
 
   const handleOnUploadImage = async (_: any, fileList: any[]) => {
+    // start
+    dispatch(startProcessing());
     // check file
     const uploadLength = fileList.length;
     const notUndefinedItem = JSON.parse(JSON.stringify(fileList)).filter(
@@ -128,6 +131,8 @@ export default function Home() {
       limit(() => processSingleFile(uploadFile))
     );
     await Promise.all(tasks);
+    // finish
+    dispatch(finishProcessing());
     return false;
   };
 
@@ -169,7 +174,13 @@ export default function Home() {
                   accept="image/*"
                   multiple
                 >
-                  <Button icon={<UploadOutlined />}>Thêm ảnh</Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    loading={loading}
+                    disabled={loading}
+                  >
+                    {loading ? 'Đang xử lý' : 'Thêm ảnh'}
+                  </Button>
                 </Upload>
               </Form.Item>
               <Form.Item>
