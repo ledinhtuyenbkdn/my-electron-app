@@ -26,8 +26,10 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { useSelector, useDispatch } from 'react-redux';
 import { PresetStatusColorType } from 'antd/lib/_util/colors';
+import { ipcRenderer } from 'electron';
+import pLimit from 'p-limit';
 import {
-  addImage,
+  addImages,
   deleteImage,
   Status,
   updateTemperature,
@@ -35,7 +37,6 @@ import {
 } from './homeSlice';
 import { RootState } from '../../store';
 import textProcessing from './textProcessing';
-import { ipcRenderer } from 'electron';
 
 const { Image } = require('image-js');
 const Tesseract = require('tesseract.js');
@@ -65,23 +66,11 @@ export default function Home() {
     ipcRenderer.send('ipc-example', images);
   };
 
-  const handleOnUploadImage = async (file: any) => {
-    // add file to redux
-    const id = uuidv4();
-    const fileUrl = URL.createObjectURL(file);
-    dispatch(
-      addImage({
-        id,
-        fileName: file.name,
-        fileUrl,
-        path: file.path,
-        temperature: '',
-        status: Status.PROCESSING,
-      })
-    );
-
+  const processSingleFile = async (fileUpload) => {
     try {
-      const image = await Image.load(fileUrl);
+      console.log('start');
+      // preprocessing image
+      const image = await Image.load(fileUpload.fileUrl);
       const preprocessed = image
         .crop({ x: 50, y: 0, width: 160, height: 54 })
         .grey()
@@ -89,36 +78,56 @@ export default function Home() {
         .invert();
       const base64 = preprocessed.toDataURL();
       // ocr
-      Tesseract.recognize(base64, 'eng', {})
-        .then(({ data: { text } }) => {
-          dispatch(
-            updateTemperature({
-              id,
-              temperature: textProcessing(text),
-            })
-          );
-          return text;
+      const ocrResult = await Tesseract.recognize(base64, 'eng', {});
+      const { text } = ocrResult.data;
+      // save to redux
+      dispatch(
+        updateTemperature({
+          id: fileUpload.id,
+          temperature: textProcessing(text),
         })
-        .catch((err: any) => {
-          console.log(err);
-          dispatch(
-            updateTemperature({
-              id,
-              temperature: 'error',
-            })
-          );
-        });
-      // end ocr
+      );
+      console.log('end');
     } catch (e) {
       console.log(e);
       dispatch(
         updateTemperature({
-          id,
+          id: fileUpload.id,
           temperature: 'error',
         })
       );
     }
+  };
 
+  const handleOnUploadImage = async (_: any, fileList: any[]) => {
+    // check file
+    const uploadLength = fileList.length;
+    const notUndefinedItem = JSON.parse(JSON.stringify(fileList)).filter(
+      (e) => e.uid !== undefined
+    ).length;
+    if (notUndefinedItem !== uploadLength) {
+      return false;
+    }
+    // add file to redux
+    const newFiles = fileList.map((fileUpload) => {
+      const id = uuidv4();
+      const fileUrl = URL.createObjectURL(fileUpload);
+      return {
+        id,
+        fileName: fileUpload.name,
+        fileUrl,
+        path: fileUpload.path,
+        temperature: '',
+        status: Status.PROCESSING,
+      };
+    });
+    dispatch(addImages(newFiles));
+    // processing
+    const limit = pLimit(2);
+    const tasks = newFiles.map((uploadFile) =>
+      limit(() => processSingleFile(uploadFile))
+    );
+    await Promise.all(tasks);
     return false;
   };
 

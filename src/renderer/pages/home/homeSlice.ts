@@ -30,6 +30,9 @@ export const homeSlice = createSlice({
     addImage: (state, action) => {
       state.images = [action.payload, ...state.images];
     },
+    addImages: (state, action) => {
+      state.images = [...action.payload, ...state.images];
+    },
     deleteImage: (state, action) => {
       const id = action.payload;
       state.images = state.images.filter((image) => image.id !== id);
@@ -78,7 +81,7 @@ export const homeSlice = createSlice({
 });
 
 // Action creators are generated for each case reducer function
-export const { addImage, deleteImage, updateTemperature, setLimit } =
+export const { addImage, deleteImage, updateTemperature, setLimit, addImages } =
   homeSlice.actions;
 
 export default homeSlice.reducer;
