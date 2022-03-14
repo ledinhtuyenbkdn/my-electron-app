@@ -21,6 +21,7 @@ import {
   IssuesCloseOutlined,
   DeleteOutlined,
   ScanOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
 import { useSelector, useDispatch } from 'react-redux';
@@ -34,6 +35,7 @@ import {
 } from './homeSlice';
 import { RootState } from '../../store';
 import textProcessing from './textProcessing';
+import { ipcRenderer } from 'electron';
 
 const { Image } = require('image-js');
 const Tesseract = require('tesseract.js');
@@ -59,6 +61,10 @@ export default function Home() {
     console.log('Failed:', errorInfo);
   };
 
+  const handleOnSave = () => {
+    ipcRenderer.send('ipc-example', images);
+  };
+
   const handleOnUploadImage = async (file: any) => {
     // add file to redux
     const id = uuidv4();
@@ -68,6 +74,7 @@ export default function Home() {
         id,
         fileName: file.name,
         fileUrl,
+        path: file.path,
         temperature: '',
         status: Status.PROCESSING,
       })
@@ -155,6 +162,11 @@ export default function Home() {
                 >
                   <Button icon={<UploadOutlined />}>Thêm ảnh</Button>
                 </Upload>
+              </Form.Item>
+              <Form.Item>
+                <Button icon={<DownloadOutlined />} onClick={handleOnSave}>
+                  Save file
+                </Button>
               </Form.Item>
             </Form>
           </Card>

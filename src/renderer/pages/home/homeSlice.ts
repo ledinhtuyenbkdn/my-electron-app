@@ -10,6 +10,7 @@ export type ImageCard = {
   id: string;
   fileUrl: string;
   fileName: string;
+  path: string;
   temperature: number;
   status: Status;
 };

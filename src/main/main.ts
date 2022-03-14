@@ -9,11 +9,13 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import fs from 'fs';
+import { Status } from '../renderer/pages/home/homeSlice';
 
 export default class AppUpdater {
   constructor() {
@@ -26,9 +28,32 @@ export default class AppUpdater {
 let mainWindow: BrowserWindow | null = null;
 
 ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+  });
+  console.log(result, arg);
+  if (arg !== null && arg.length > 0) {
+    arg.forEach((image) => {
+      if (image.status === Status.LOWER) {
+        fs.cp(
+          image.path,
+          path.resolve(result.filePaths[0], 'lower', image.fileName),
+          (e) => {
+            console.log(e);
+          }
+        );
+      } else if (image.status === Status.HIGHER) {
+        fs.cp(
+          image.path,
+          path.resolve(result.filePaths[0], 'higher', image.fileName),
+          (e) => {
+            console.log(e);
+          }
+        );
+      }
+    })
+  }
+  event.reply('ipc-example', 'test');
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -75,7 +100,8 @@ const createWindow = async () => {
     height: 728,
     icon: getAssetPath('icon.png'),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+      contextIsolation: false,
     },
   });
 
